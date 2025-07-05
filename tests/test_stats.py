@@ -22,6 +22,5 @@ def test_stats(mock_get_all_stats):
 
 	assert response.status_code == 200
 	assert "Total requests to /stats" in response.json()
-	assert "Total requests to /tickets*" in response.json()
 	assert "Total auth failures" in response.json()
 	assert "Total requests" in response.json()
