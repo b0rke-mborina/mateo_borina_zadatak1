@@ -1,5 +1,5 @@
-from sqlalchemy import create_engine, Column, Integer, String
-from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 from app.db.base import Base
 from app.models.statistic import Statistic
 
@@ -20,7 +20,7 @@ def seed_statistics():
 		for stat in stats:
 			existing = session.query(Statistic).filter_by(statistic=stat).first()
 			if not existing:
-					session.add(Statistic(statistic=stat, value=0))
+				session.add(Statistic(statistic=stat, value=0))
 		session.commit()
 
 def increment_statistic(stat_names, increment=1):
@@ -31,10 +31,10 @@ def increment_statistic(stat_names, increment=1):
 		for stat_name in stat_names:
 			stat = session.query(Statistic).filter_by(statistic=stat_name).first()
 			if stat:
-					stat.value += increment
+				stat.value += increment
 			else:
-					stat = Statistic(statistic=stat_name, value=increment)
-					session.add(stat)
+				stat = Statistic(statistic=stat_name, value=increment)
+				session.add(stat)
 		session.commit()
 
 def get_all_statistics():
