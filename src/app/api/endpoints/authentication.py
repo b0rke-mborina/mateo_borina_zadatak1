@@ -6,5 +6,4 @@ router = APIRouter()
 
 @router.post("/login")
 async def login(payload: LoginRequest):
-    print('Logging in with username:', payload)
-    return await user_login(payload.username, payload.password)
+	return await user_login(payload.username, payload.password)

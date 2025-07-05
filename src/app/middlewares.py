@@ -1,16 +1,12 @@
-from fastapi import Request, HTTPException, Depends
+from fastapi import Request, HTTPException
 from starlette.status import HTTP_401_UNAUTHORIZED
-import httpx
+from app.clients.dummyjson_client import post_dummyjson_authorization
 
 async def auth_required(request: Request):
-    auth_header = request.headers.get("Authorization")
-    if not auth_header:
-        raise HTTPException(status_code=HTTP_401_UNAUTHORIZED, detail="Authorization header missing")
+	auth_header = request.headers.get("Authorization")
+	if not auth_header:
+		raise HTTPException(status_code=HTTP_401_UNAUTHORIZED, detail="Authorization header missing")
 
-    async with httpx.AsyncClient() as client:
-        response = await client.get("https://dummyjson.com/auth/me", headers={"Authorization": auth_header})
-        if response.status_code != 200:
-            raise HTTPException(status_code=HTTP_401_UNAUTHORIZED, detail="Invalid token")
-        user = response.json()
+	user = await post_dummyjson_authorization(auth_header)
 
-    request.state.user = user
+	request.state.user = user

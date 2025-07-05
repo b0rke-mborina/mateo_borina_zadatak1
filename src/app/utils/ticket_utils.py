@@ -1,4 +1,4 @@
-from src.app.models.ticket import Ticket
+from app.models.ticket import Ticket
 
 def calculate_priority(id: int) -> str:
 	match id % 3:

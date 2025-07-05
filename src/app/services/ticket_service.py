@@ -34,7 +34,7 @@ async def get_tickets(status: Optional[str], priority: Optional[str], skip: int,
 
 async def get_ticket_by_id(ticket_id: int) -> Optional[TicketDetail]:
 	ticket = await get_dummyjson_ticket_by_id(ticket_id)
-	user = await get_dummyjson_user(ticket["userId"])
+	user = await get_dummyjson_user(ticket["userId"], select=["firstName", "lastName"])
 	ticket = map_to_ticket(ticket, user)
 	if not ticket:
 		return None
@@ -49,7 +49,8 @@ async def get_ticket_by_id(ticket_id: int) -> Optional[TicketDetail]:
 	)
 
 async def search_tickets(q: str) -> List[Ticket]:
-	filtered = [t for t in await get_all_dummyjson_tickets() if q.lower() in t['todo'].lower()]
+	all_tickets = await get_all_dummyjson_tickets()
+	filtered = [t for t in all_tickets if q.lower() in t['todo'].lower()]
 
 	user_ids = set(t["userId"] for t in filtered)
 	users = await asyncio.gather(
