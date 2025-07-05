@@ -2,10 +2,11 @@ from typing import List, Optional
 from app.models.ticket import Ticket, TicketDetail
 from typing import List
 import asyncio
-
 from app.clients.dummyjson_client import *
 from app.utils.ticket_utils import calculate_priority, map_to_ticket
+import logging
 
+logger = logging.getLogger(__name__)
 BASE_URL = "https://dummyjson.com/todos"
 
 async def get_tickets(status: Optional[str], priority: Optional[str], skip: int, limit: int) -> dict:
@@ -37,6 +38,7 @@ async def get_ticket_by_id(ticket_id: int) -> Optional[TicketDetail]:
 	user = await get_dummyjson_user(ticket["userId"], select=["firstName", "lastName"])
 	ticket = map_to_ticket(ticket, user)
 	if not ticket:
+		logger.error(f"Ticket with ID {ticket_id} not found")
 		return None
 	return TicketDetail(
 		id=ticket.id,

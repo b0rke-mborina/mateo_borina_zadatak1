@@ -1,6 +1,9 @@
 from fastapi import Request
 from slowapi import Limiter
 from slowapi.util import get_remote_address
+import logging
+
+logger = logging.getLogger(__name__)
 
 def key_function(request: Request) -> str:
 	if 'Authorization ' in request.headers:
