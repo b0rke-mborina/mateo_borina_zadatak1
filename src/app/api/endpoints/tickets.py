@@ -7,7 +7,7 @@ from app.middlewares import auth_required
 # Disabled this for development
 # router = APIRouter(dependencies=[Depends(auth_required)])
 router = APIRouter()
-    
+
 @router.get("/tickets", response_model=dict)
 async def read_tickets(status: Optional[str] = Query(None), priority: Optional[str] = Query(None), skip: int = 0, limit: int = 10):
 	return await get_tickets(status=status, priority=priority, skip=skip, limit=limit)

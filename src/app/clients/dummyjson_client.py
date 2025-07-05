@@ -1,8 +1,10 @@
 from typing import Optional
 import httpx
+from aiocache import cached, SimpleMemoryCache
 
 BASE_URL = "https://dummyjson.com"
 
+@cached(ttl=60, cache=SimpleMemoryCache)
 async def get_all_dummyjson_tickets() -> list[dict]:
 	async with httpx.AsyncClient() as client:
 		resp = await client.get(f"{BASE_URL}/todos")
@@ -14,6 +16,7 @@ async def get_all_dummyjson_tickets() -> list[dict]:
 		resp.raise_for_status()
 		return resp.json()["todos"]
 
+@cached(ttl=60, cache=SimpleMemoryCache)
 async def get_dummyjson_tickets(skip: int, limit: int) -> list[dict]:
 	async with httpx.AsyncClient() as client:
 		params = {"skip": skip, "limit": limit}
@@ -21,12 +24,14 @@ async def get_dummyjson_tickets(skip: int, limit: int) -> list[dict]:
 		resp.raise_for_status()
 		return resp.json()
 
+@cached(ttl=60, cache=SimpleMemoryCache)
 async def get_dummyjson_ticket_by_id(ticket_id: int) -> dict:
 	async with httpx.AsyncClient() as client:
 		resp = await client.get(f"{BASE_URL}/todos/{ticket_id}")
 		resp.raise_for_status()
 		return resp.json()
 
+@cached(ttl=60, cache=SimpleMemoryCache)
 async def get_dummyjson_user(user_id: int, select: Optional[list[str]] = None) -> dict:
 	async with httpx.AsyncClient() as client:
 		params = {}
@@ -35,7 +40,7 @@ async def get_dummyjson_user(user_id: int, select: Optional[list[str]] = None) -
 		resp = await client.get(f"{BASE_URL}/users/{user_id}", params=params)
 		resp.raise_for_status()
 		return resp.json()
-	
+
 async def post_dummyjson_login(username: str, password: str) -> dict:
     async with httpx.AsyncClient() as client:
         resp = await client.post(f"{BASE_URL}/auth/login", json={"username": username, "password": password})
