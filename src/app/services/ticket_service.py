@@ -1,63 +1,41 @@
 from typing import List, Optional
 from app.models.ticket import Ticket, TicketDetail
-import httpx
 from typing import List
+import asyncio
+
+from app.clients.dummyjson_client import *
+from app.utils.ticket_utils import calculate_priority, map_to_ticket
 
 BASE_URL = "https://dummyjson.com/todos"
 
-async def get_all_tickets() -> list[Ticket]:
-	raw_todos = await get_dummyjson_tickets()
-	tickets = []
-	for todo in raw_todos:
-		ticket = await map_to_ticket(todo)
-		tickets.append(ticket)
-	return tickets
+async def get_tickets(status: Optional[str], priority: Optional[str], skip: int, limit: int) -> dict:
+	response = await get_dummyjson_tickets(skip=skip, limit=limit)
+	todos = response["todos"]
 
-"""async def get_all_tickets() -> List[Ticket]:
-	tickets = []
-	limit = 100
-	skip = 0
-	total = None
-
-	async with httpx.AsyncClient() as client:
-		while total is None or skip < total:
-			response = await client.get(f"{BASE_URL}?limit={limit}&skip={skip}")
-			response.raise_for_status()
-			data = response.json()
-
-			total = data.get("total", 0)
-			todos = data.get("todos", [])
-			tickets.extend(Ticket(**todo) for todo in todos)
-
-			skip += limit
-
-	return tickets"""
-
-def paginate(items, page: int = 0, limit: int = 10):
-	start = (page - 1) * limit
-	end = start + limit
-	return items[start:end]
-
-async def get_tickets(status: Optional[str], priority: Optional[str], page: int, limit: int) -> List[Ticket]:
-	filtered = await get_all_tickets()
 	if status:
-		filtered = [t for t in filtered if t.status == status]
+		todos = [t for t in todos if t["completed"] == (status == "closed")]
 	if priority:
-		filtered = [t for t in filtered if t.priority == priority]
-	return [
-		Ticket(
-			id=t.id,
-			title=t.title,
-			status=t.status,
-			priority=t.priority,
-			description=t.description[:100],
-			assignee=t.assignee
-		)
-		for t in paginate(filtered, page, limit)
-	]
+		todos = [t for t in todos if calculate_priority(t["id"]) == priority]
+
+	user_ids = set(t["userId"] for t in todos)
+
+	users = await asyncio.gather(
+		*(get_dummyjson_user(user_id, select=["firstName", "lastName"]) for user_id in user_ids)
+	)
+	users = {user['id']: user for user in users}
+
+	tickets = [map_to_ticket(todo, users[todo["userId"]]) for todo in todos]
+	return {
+		"tickets": tickets,
+		"total": response["total"],
+		"skip": skip,
+		"limit": limit
+	}
 
 async def get_ticket_by_id(ticket_id: int) -> Optional[TicketDetail]:
-	ticket = next((t for t in await get_all_tickets() if t.id == ticket_id), None)
+	ticket = await get_dummyjson_ticket_by_id(ticket_id)
+	user = await get_dummyjson_user(ticket["userId"])
+	ticket = map_to_ticket(ticket, user)
 	if not ticket:
 		return None
 	return TicketDetail(
@@ -70,45 +48,14 @@ async def get_ticket_by_id(ticket_id: int) -> Optional[TicketDetail]:
 		details=ticket
 	)
 
-async def search_tickets(q: str, page: int, limit: int) -> List[Ticket]:
-	filtered = [t for t in await get_all_tickets() if q.lower() in t.title.lower()]
-	return [
-		Ticket(
-			id=t.id,
-			title=t.title,
-			status=t.status,
-			priority=t.priority,
-			description=t.description[:100],
-			assignee=t.assignee
-		)
-		for t in paginate(filtered, page, limit)
-	]
+async def search_tickets(q: str) -> List[Ticket]:
+	filtered = [t for t in await get_all_dummyjson_tickets() if q.lower() in t['todo'].lower()]
 
-async def get_dummyjson_tickets() -> list[dict]:
-	async with httpx.AsyncClient() as client:
-		resp = await client.get("https://dummyjson.com/todos")
-		resp.raise_for_status()
-		return resp.json()["todos"]
-
-async def get_dummyjson_user(user_id: int) -> dict:
-	async with httpx.AsyncClient() as client:
-		resp = await client.get(f"https://dummyjson.com/users/{user_id}")
-		resp.raise_for_status()
-		return resp.json()
-
-def calculate_priority(id: int) -> str:
-	match id % 3:
-		case 0: return "low"
-		case 1: return "medium"
-		case 2: return "high"
-
-async def map_to_ticket(todo: dict) -> Ticket:
-	user = await get_dummyjson_user(todo["userId"])
-	return Ticket(
-		id=todo["id"],
-		title=todo["todo"],
-		status="closed" if todo["completed"] else "open",
-		priority=calculate_priority(todo["id"]),
-		assignee=f"{user['firstName']} {user['lastName']}",
-		description=todo["todo"][:100]
+	user_ids = set(t["userId"] for t in filtered)
+	users = await asyncio.gather(
+		*(get_dummyjson_user(user_id, select=["firstName", "lastName"]) for user_id in user_ids)
 	)
+	users = {user['id']: user for user in users}
+	tickets = [map_to_ticket(todo, users[todo["userId"]]) for todo in filtered]
+
+	return tickets
